@@ -1,1 +1,44 @@
-3.9.18
+import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+import openai
+from dotenv import load_dotenv
+
+# .env faylini yuklash
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
+
+# /start komandasi uchun funksiya
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Salom! Men AI botman. Savolingizni yuboring.")
+
+# AI javob beradigan funksiya
+async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  
+            messages=[
+                {"role": "system", "content": "Siz foydalanuvchiga yordam beruvchi AI botisiz."},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=150,
+            temperature=0.7,
+        )
+        await update.message.reply_text(response['choices'][0]['message']['content'].strip())
+    except Exception as e:
+        await update.message.reply_text(f"Xatolik: {e}")
+
+# Botni ishga tushirish
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_response))
+
+print("Bot ishga tushdi!")
+app.run_polling()
+
+
